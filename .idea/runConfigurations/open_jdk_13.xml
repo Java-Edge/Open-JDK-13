@@ -1,0 +1,5 @@
+<component name="ProjectRunConfigurationManager">
+  <configuration default="false" name="open-jdk-13" type="CMakeRunConfiguration" factoryName="Application" PROGRAM_PARAMS="-version" PASS_PARENT_ENVS_2="true" PROJECT_NAME="src" TARGET_NAME="src" CONFIG_NAME="Debug" RUN_PATH="$PROJECT_DIR$/../build/macosx-x86_64-server-release/jdk/bin/java">
+    <method v="2" />
+  </configuration>
+</component>
