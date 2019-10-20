@@ -22,6 +22,7 @@
  *
  */
 
+#include <universe.hpp>
 #include "precompiled.hpp"
 #include "classfile/javaClasses.inline.hpp"
 #include "classfile/symbolTable.hpp"
@@ -752,14 +753,10 @@ void InterpreterRuntime::resolve_get_put(JavaThread* thread, Bytecodes::Code byt
   );
 }
 
-
 //------------------------------------------------------------------------------------------------------------------------
 // Synchronization
-//
-// The interpreter's synchronization code is factored out so that it can
-// be shared by method invocation and synchronized blocks.
+// 解释器的同步代码被分解，以便可以由方法调用和同步块共享。
 //%note synchronization_3
-
 //%note monitor_1
 JRT_ENTRY_NO_ASYNC(void, InterpreterRuntime::monitorenter(JavaThread* thread, BasicObjectLock* elem))
 #ifdef ASSERT
@@ -772,7 +769,7 @@ JRT_ENTRY_NO_ASYNC(void, InterpreterRuntime::monitorenter(JavaThread* thread, Ba
   assert(Universe::heap()->is_in_reserved_or_null(h_obj()),
          "must be NULL or an object");
   if (UseBiasedLocking) {
-    // Retry fast entry if bias is revoked to avoid unnecessary inflation
+    // 如果取消了偏向，请重试快速进入，以避免不必要的🔐膨胀
     ObjectSynchronizer::fast_enter(h_obj, elem->lock(), true, CHECK);
   } else {
     ObjectSynchronizer::slow_enter(h_obj, elem->lock(), CHECK);
@@ -783,7 +780,6 @@ JRT_ENTRY_NO_ASYNC(void, InterpreterRuntime::monitorenter(JavaThread* thread, Ba
   thread->last_frame().interpreter_frame_verify_monitor(elem);
 #endif
 JRT_END
-
 
 //%note monitor_1
 JRT_ENTRY_NO_ASYNC(void, InterpreterRuntime::monitorexit(JavaThread* thread, BasicObjectLock* elem))

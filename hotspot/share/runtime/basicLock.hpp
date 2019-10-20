@@ -45,20 +45,15 @@ class BasicLock {
   static int displaced_header_offset_in_bytes()       { return offset_of(BasicLock, _displaced_header); }
 };
 
-// A BasicObjectLock associates a specific Java object with a BasicLock.
-// It is currently embedded in an interpreter frame.
-
-// Because some machines have alignment restrictions on the control stack,
-// the actual space allocated by the interpreter may include padding words
-// after the end of the BasicObjectLock.  Also, in order to guarantee
-// alignment of the embedded BasicLock objects on such machines, we
-// put the embedded BasicLock at the beginning of the struct.
-
+// BasicObjectLock将特定的Java对象与BasicLock相关联。
+// 当前嵌入在解释器框架中。
+// 由于某些机器在控制堆栈上有对齐限制，因此解释器分配的实际空间可能在BasicObjectLock末尾包含填充字。 
+// 同样，为了保证内置的BasicLock对象在此类机器上的对齐，我们将内置的BasicLock放在结构的开头。
 class BasicObjectLock {
   friend class VMStructs;
  private:
-  BasicLock _lock;                                    // the lock, must be double word aligned
-  oop       _obj;                                     // object holds the lock;
+  BasicLock _lock;                                    // 锁，必须双字对齐
+  oop       _obj;                                     // 持有锁的对象
 
  public:
   // Manipulation
