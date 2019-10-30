@@ -258,11 +258,10 @@ bool ObjectSynchronizer::quick_enter(oop obj, Thread * Self,
 
 // -----------------------------------------------------------------------------
 //  Fast Monitor Enter/Exit
-// This the fast monitor enter. The interpreter and compiler use
-// some assembly copies of this code. Make sure update those code
-// if the following function is changed. The implementation is
-// extremely sensitive to race condition. Be careful.
-
+//  This the fast monitor enter. 
+//  解释器和编译器使用此代码的某些程序集副本。
+//  如果更改了该函数，请确保更新那些代码。
+//  该实现对竞争条件极为敏感。 小心!
 void ObjectSynchronizer::fast_enter(Handle obj, BasicLock* lock,
                                     bool attempt_rebias, TRAPS) {
   if (UseBiasedLocking) {

@@ -75,8 +75,8 @@ JLI_StringDup(const char *s1)
 }
 
 /*
- * Very equivalent to free(ptr).
- * Here to maintain pairing with the above routines.
+ * 非常等同于free（ptr）
+ * 这里要保持与上述例程的配对
  */
 JNIEXPORT void JNICALL
 JLI_MemFree(void *ptr)
