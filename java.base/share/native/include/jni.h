@@ -154,7 +154,7 @@ typedef enum _jobjectType {
 #define JNI_TRUE 1
 
 /*
- * possible return values for JNI functions.
+ * JNI方法的可能返回值.
  */
 
 #define JNI_OK           0                 /* success */

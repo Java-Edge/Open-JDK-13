@@ -3844,7 +3844,7 @@ extern const struct JNIInvokeInterface_ jni_InvokeInterface;
 
 // Global invocation API vars
 volatile int vm_created = 0;
-// Indicate whether it is safe to recreate VM
+// 指示重新创建虚拟机是否安全
 volatile int safe_to_recreate_vm = 1;
 struct JavaVM_ main_vm = {&jni_InvokeInterface};
 
@@ -3878,7 +3878,7 @@ _JNI_IMPORT_OR_EXPORT_ jint JNICALL JNI_GetDefaultJavaVMInitArgs(void *args_) {
 }
 
 DT_RETURN_MARK_DECL(CreateJavaVM, jint
-                    , HOTSPOT_JNI_CREATEJAVAVM_RETURN(_ret_ref));
+                    , HOTSPOT_JNI_create_vmCREATEJAVAVM_RETURN(_ret_ref));
 
 static jint JNI_CreateJavaVM_inner(JavaVM **vm, void **penv, void *args) {
   HOTSPOT_JNI_CREATEJAVAVM_ENTRY((void **) vm, penv, args);
@@ -3886,10 +3886,10 @@ static jint JNI_CreateJavaVM_inner(JavaVM **vm, void **penv, void *args) {
   jint result = JNI_ERR;
   DT_RETURN_MARK(CreateJavaVM, jint, (const jint&)result);
 
-  // We're about to use Atomic::xchg for synchronization.  Some Zero
-  // platforms use the GCC builtin __sync_lock_test_and_set for this,
-  // but __sync_lock_test_and_set is not guaranteed to do what we want
-  // on all architectures.  So we check it works before relying on it.
+  // 我们将使用 Atomic::xchg 进行同步.
+  // 某些 Zero 平台为此使用GCC内置的 __sync_lock_test_and_set，
+  // 但是 __sync_lock_test_and_set 不能保证在所有体系结构上都能完成我们的意愿.
+  // 因此，我们在依赖它之前先检查它是否有效.
 #if defined(ZERO) && defined(ASSERT)
   {
     jint a = 0xcafebabe;
@@ -3901,38 +3901,39 @@ static jint JNI_CreateJavaVM_inner(JavaVM **vm, void **penv, void *args) {
   }
 #endif // ZERO && ASSERT
 
-  // At the moment it's only possible to have one Java VM,
-  // since some of the runtime state is in global variables.
+  // 至此，只可能有一个Java VM, 因为某些运行时状态位于全局变量中.
 
+  // 我们不能在这里使用互斥锁，因为它们仅适用于线程.
+  // 我们进行原子比较和交换，以确保一次只能有一个线程可以调用此方法
   // We cannot use our mutex locks here, since they only work on
   // Threads. We do an atomic compare and exchange to ensure only
   // one thread can call this method at a time
 
-  // We use Atomic::xchg rather than Atomic::add/dec since on some platforms
-  // the add/dec implementations are dependent on whether we are running
-  // on a multiprocessor Atomic::xchg does not have this problem.
+  // 我们使用 Atomic::xchg 而不是  Atomic::add/dec,
+  // 因为在某些平台上, add/dec 的实现取决于我们是否在多处理器上运行 Atomic::xchg 没有此问题.
   if (Atomic::xchg(1, &vm_created) == 1) {
-    return JNI_EEXIST;   // already created, or create attempt in progress
+    return JNI_EEXIST;   // 已经创建，或正在进行创建尝试
   }
   if (Atomic::xchg(0, &safe_to_recreate_vm) == 0) {
-    return JNI_ERR;  // someone tried and failed and retry not allowed.
+    return JNI_ERR;  // someone尝试失败了但不允许重试.
   }
 
   assert(vm_created == 1, "vm_created is true during the creation");
 
   /**
-   * Certain errors during initialization are recoverable and do not
-   * prevent this method from being called again at a later time
-   * (perhaps with different arguments).  However, at a certain
-   * point during initialization if an error occurs we cannot allow
-   * this function to be called again (or it will crash).  In those
-   * situations, the 'canTryAgain' flag is set to false, which atomically
-   * sets safe_to_recreate_vm to 1, such that any new call to
-   * JNI_CreateJavaVM will immediately fail using the above logic.
+   * 初始化过程中的某些错误是可恢复的，并且不会阻止以后再次调用此方法（可能使用不同的参数）.
+   * 但是，在初始化过程中的某个特定时刻，如果发生错误，我们将不允许再次调用此函数（否则它将崩溃）.
+   * 在这些情况下，'canTryAgain' 标志设置为false,
+   * 这会自动将 safe_to_recreate_vm 设置为1，这样，使用上述逻辑对JNI_CreateJavaVM的任何新调用都会立即失败.
    */
   bool can_try_again = true;
 
+  // =================================
+  //           创建虚拟机
+  // =================================
   result = Threads::create_vm((JavaVMInitArgs*) args, &can_try_again);
+
+    // 如果创建成功
   if (result == JNI_OK) {
     JavaThread *thread = JavaThread::current();
     assert(!thread->has_pending_exception(), "should have returned not OK");
@@ -3967,18 +3968,17 @@ static jint JNI_CreateJavaVM_inner(JavaVM **vm, void **penv, void *args) {
 #ifndef PRODUCT
     if (ReplayCompiles) ciReplay::replay(thread);
 
-    // Some platforms (like Win*) need a wrapper around these test
-    // functions in order to properly handle error conditions.
+    // 某些平台（例如Win*）需要在这些测试功能周围包装，以正确处理错误情况.
     VMError::test_error_handler();
 #endif
 
-    // Since this is not a JVM_ENTRY we have to set the thread state manually before leaving.
+    // 由于这不是 JVM_ENTRY，因此必须在离开之前手动设置线程状态.
     ThreadStateTransition::transition(thread, _thread_in_vm, _thread_in_native);
+    // 如果 VM 未创建成功
   } else {
-    // If create_vm exits because of a pending exception, exit with that
-    // exception.  In the future when we figure out how to reclaim memory,
-    // we may be able to exit with JNI_ERR and allow the calling application
-    // to continue.
+    // 如果 create_vm 由于挂起的异常而退出，请使用该异常退出.
+    // 将来当我们想出如何回收内存时,
+    // 我们也许可以使用 JNI_ERR 退出并允许调用应用程序继续.
     if (Universe::is_fully_initialized()) {
       // otherwise no pending exception possible - VM will already have aborted
       JavaThread* THREAD = JavaThread::current();
@@ -3989,19 +3989,19 @@ static jint JNI_CreateJavaVM_inner(JavaVM **vm, void **penv, void *args) {
     }
 
     if (can_try_again) {
-      // reset safe_to_recreate_vm to 1 so that retrial would be possible
+      // 将 safe_to_recreate_vm 重置为1，以便可以重试
       safe_to_recreate_vm = 1;
     }
 
-    // Creation failed. We must reset vm_created
+    // 创建失败. 必须重置 vm_created
     *vm = 0;
     *(JNIEnv**)penv = 0;
-    // reset vm_created last to avoid race condition. Use OrderAccess to
-    // control both compiler and architectural-based reordering.
+    // 重置 vm_created last 以避免竞态.
+    // 使用 OrderAccess 控制编译器和基于体系结构的重排序.
     OrderAccess::release_store(&vm_created, 0);
   }
 
-  // Flush stdout and stderr before exit.
+  // 在退出前刷新 stdout 和 stderr.
   fflush(stdout);
   fflush(stderr);
 
@@ -4011,14 +4011,14 @@ static jint JNI_CreateJavaVM_inner(JavaVM **vm, void **penv, void *args) {
 
 _JNI_IMPORT_OR_EXPORT_ jint JNICALL JNI_CreateJavaVM(JavaVM **vm, void **penv, void *args) {
   jint result = JNI_ERR;
-  // On Windows, let CreateJavaVM run with SEH protection
+  // 在Windows上，让 CreateJavaVM 在 SEH 保护下运行
 #ifdef _WIN32
   __try {
 #endif
     result = JNI_CreateJavaVM_inner(vm, penv, args);
 #ifdef _WIN32
   } __except(topLevelExceptionFilter((_EXCEPTION_POINTERS*)_exception_info())) {
-    // Nothing to do.
+    // 无所事事.
   }
 #endif
   return result;

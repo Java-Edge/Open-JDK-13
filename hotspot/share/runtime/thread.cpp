@@ -3734,7 +3734,7 @@ void Threads::initialize_jsr292_core_classes(TRAPS) {
 jint Threads::create_vm(JavaVMInitArgs* args, bool* canTryAgain) {
   extern void JDK_Version_init();
 
-  // Preinitialize version info.
+  // 预初始化版本信息.
   VM_Version::early_initialize();
 
   // Check version

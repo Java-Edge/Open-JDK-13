@@ -74,7 +74,7 @@
 #define JDK_JAVA_OPTIONS "JDK_JAVA_OPTIONS"
 
 /*
- * Pointers to the needed JNI invocation API, initialized by LoadJavaVM.
+ * 指向所需的JNI调用API的指针，该API由 LoadJavaVM 初始化.
  */
 typedef jint (JNICALL *CreateJavaVM_t)(JavaVM **pvm, void **env, void *args);
 typedef jint (JNICALL *GetDefaultJavaVMInitArgs_t)(void *args);

@@ -1519,8 +1519,8 @@ ParseArguments(int *pargc, char ***pargv,
 }
 
 /*
- * Initializes the Java Virtual Machine. Also frees options array when
- * finished.
+ * 初始化Java虚拟机.
+ * 完成后还释放options数组.
  */
 static jboolean
 InitializeJVM(JavaVM **pvm, JNIEnv **penv, InvocationFunctions *ifn) {
@@ -1545,6 +1545,7 @@ InitializeJVM(JavaVM **pvm, JNIEnv **penv, InvocationFunctions *ifn) {
                    i, args.options[i].optionString);
     }
 
+    // 调用JNI_CreateJavaVM方法
     r = ifn->CreateJavaVM(pvm, (void **) penv, &args);
     JLI_MemFree(options);
     return r == JNI_OK;
